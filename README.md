@@ -11,11 +11,11 @@ Windows 7/8/8.1/10
 ### 可用重载语言
 C++ C# VB.NET
 ## 开发进程
-验证性程序 √
-接口设计 √
-AccurateRip API接入
-类设计
-Cli Alpha版测试
-GUI设计
-GUI Alpha版测试
-Release
+验证性程序 ✔
+接口设计 ✔
+AccurateRip API接入 ❌
+类设计 ❌
+Cli Alpha版测试 ❌
+GUI设计 ❌
+GUI Alpha版测试 ❌
+Release ❌
