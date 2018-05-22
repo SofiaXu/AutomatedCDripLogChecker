@@ -13,6 +13,7 @@ C++ C# VB.NET
 ## 开发进程
 验证性程序 √
 接口设计 √
+AccurateRip API接入
 类设计
 Cli Alpha版测试
 GUI设计
