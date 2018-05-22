@@ -8,8 +8,8 @@ Linux 标准发行版 Windows 7/8/8.1/10 MacOS
 #### 使用平台
 Windows 7/8/8.1/10
 ### 类库 基于.NET Standard 2.0
-### 可用重载语言
-C++ C# VB.NET
+#### 可用重载语言
+C++/C#/VB.NET
 ## 开发进程
 验证性程序 ✔
 接口设计 ✔
