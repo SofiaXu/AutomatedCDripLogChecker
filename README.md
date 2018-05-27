@@ -22,4 +22,6 @@ Release ❌
 ## 开发者
 TSDMMUSICDevelopersTeam@Sofia Xu(TSDM@あおば)
 ## 特别感谢
-TSDM@I_Shinji TSDM@火亘
+TSDM@I_Shinji 提供参考源码
+
+TSDM@火亘 提供EAC&XLD教程
