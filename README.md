@@ -19,3 +19,7 @@ Cli Alpha版测试 ❌
 GUI设计 ❌
 GUI Alpha版测试 ❌
 Release ❌
+## 开发者
+TSDMMUSICDevelopersTeam@Sofia Xu(TSDM@あおば)
+## 特别感谢
+TSDM@I_Shinji TSDM@火亘
