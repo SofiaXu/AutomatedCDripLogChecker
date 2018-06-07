@@ -1,56 +1,336 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace AutomatedCDripLogChecker.Core
 {
-    public class EACLogChecker : ILogChecker
+    public class EACLogChecker
     {
-        private int score = 0;
-        private int MaxScore = 100;
-        private string comment = "";
-
-        public Dictionary<string, int> MasterRule { get; set; }
-        public Dictionary<string, int> TrackRule { get; set; }
-
-        public string GetCommment(string log)
+        public Dictionary<string, RuleItem> MasterRule { get; set; }
+        public Dictionary<string, RuleItem> TrackRule { get; set; }
+        /// <summary>
+        /// 将由UTF-16编码的EAC抓轨记录转换为EACLog类
+        /// </summary>
+        /// <param name="log">表示一个完整的由UTF-16编码的EAC抓轨记录</param>
+        /// <returns></returns>
+        public EACLog ConvertfromString(string log)
         {
-            return GetResult(log).Item1;
+            #region Pre.
+            string[] splitPoint = new string[] { ": " };
+            EACLog eACLog = new EACLog();
+            int head = 0;
+            int range = 0;
+            int trackcount = 0;
+            List<string> sublist;
+            List<string> loglines = log.Split(new string[] { "\r\n" }, StringSplitOptions.None).ToList();
+            if (!loglines[0].StartsWith("Exact Audio Copy"))
+            {
+                throw new Exception("Error:000001");//Error:000001 表示该log不是EAC log
+            }
+            if (loglines.Exists((s) => s.Trim() == "Range status and errors" ? true : false))
+            {
+                eACLog.IsRange = true;
+            }
+            #endregion
+            #region Handle header
+            eACLog.EACVision = (loglines[0].Substring(17).Split(new string[] { "from " }, StringSplitOptions.None))[0];
+
+            eACLog.CopyDate = (loglines[2].Split(new string[] { "from " }, StringSplitOptions.None))[1];
+
+            eACLog.LogCheckSum = (loglines.Last().Split(' '))[3];
+
+            eACLog.TrackName = loglines[4];
+
+            eACLog.UsedDrive = SearchStringStartsWithinList("Used drive", loglines)?.Split(splitPoint, StringSplitOptions.None)[1].Replace("Adapter", "");
+            eACLog.Adapter = SearchStringStartsWithinList("Used drive", loglines)?.Split(splitPoint, StringSplitOptions.None)[2].Replace("ID", "");
+            eACLog.UsedDrive = SearchStringStartsWithinList("Used drive", loglines)?.Split(splitPoint, StringSplitOptions.None)[3];
+
+            eACLog.ReadMode = SearchStringStartsWithinList("Read mode", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.UtilizeAccurateStream = SearchStringStartsWithinList("Utilize accurate stream", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.DefeatAudioCache = SearchStringStartsWithinList("Defeat audio cache", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.MakeUseofC2Pointers = SearchStringStartsWithinList("Make use of C2 pointers", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+
+            eACLog.ReadOffsetCorrection = SearchStringStartsWithinList("Read offset correction", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.OverreadIntoLeadInandLeadOut = SearchStringStartsWithinList("Overread into Lead-In and Lead-Out", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.FillUpMissingOffsetSamplesWithSilence = SearchStringStartsWithinList("Fill up missing offset samples with silence", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.DeleteLeadingTrailingSilentBlocks = SearchStringStartsWithinList("Delete leading and trailing silent blocks", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.NullSamplesUsedinCRCCalculations = SearchStringStartsWithinList("Null samples used in CRC calculations", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.UsedInterface = SearchStringStartsWithinList("Used interface", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.GapHandling = SearchStringStartsWithinList("Gap handling", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.NormalizeTo = SearchStringStartsWithinList("Normalize to", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            eACLog.UseCompressionOffset = loglines.Exists(a => a.Trim() == "Use compression offset");
+
+            eACLog.OutputFormat = SearchStringStartsWithinList("Used output format", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            if (eACLog.OutputFormat == "User Defined Encoder")
+            {
+                eACLog.SelectedBitrate = SearchStringStartsWithinList("Selected bitrate", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+                eACLog.Quality = SearchStringStartsWithinList("Quality", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+                eACLog.AddID3Tag = SearchStringStartsWithinList("Add ID3 tag", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+                eACLog.CommandLineCompressor = SearchStringStartsWithinList("Command line compressor", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+                eACLog.AdditionalCommandLineOptions = SearchStringStartsWithinList("Additional command line options", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            }
+            else if (eACLog.OutputFormat == "Internal WAV Routines")
+            {
+                eACLog.SimpleFormat = SearchStringStartsWithinList("Simple format", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
+            }
+            eACLog.IsAllAccuratelyRipped = loglines.Exists(a => a.Trim() == "All tracks accurately ripped");
+            #endregion
+            #region Handle TOC
+            head = loglines.IndexOf("TOC of the extracted CD") + 4;
+            range = 0;
+            if (eACLog.IsRange)
+            {
+                range = loglines.IndexOf("Range status and errors") - 1 - head;
+            }
+            else
+            {
+                range = loglines.IndexOf("Track  1") - 1 - head;
+            }
+            sublist = loglines.GetRange(head, range);
+            foreach (var item in sublist)
+            {
+                string[] subitem = item.Split('|');
+                if (int.TryParse(subitem[0].Trim(), out int a))
+                {
+                    TOCItem tempTOC = new TOCItem()
+                    {
+                        TrackNumber = subitem[0].Trim(),
+                        StartTime = subitem[1].Trim(),
+                        Length = subitem[2].Trim(),
+                        StartSector = subitem[3].Trim(),
+                        EndSector = subitem[4].Trim()
+                    };
+                    eACLog.TOC.Add(tempTOC);
+                }
+
+            }
+            #endregion
+            #region Handle Track
+            head = 0;
+            range = 0;
+            if (eACLog.IsRange)
+            {
+                head = loglines.IndexOf("Range status and errors");
+                range = loglines.IndexOf("End of status report") - 1 - head;
+            }
+            else
+            {
+                head = loglines.IndexOf("Track  1");
+                range = loglines.IndexOf("End of status report") - 1 - head;
+            }
+            sublist = loglines.GetRange(head, range);
+            foreach (var item in sublist)
+            {
+                var itemt = item.Trim();
+                if (item.StartsWith("Track ") || item.StartsWith("Selected range"))
+                {
+                    trackcount++;
+                    eACLog.TrackList.Add(new TrackItem());
+                    eACLog.TrackList[trackcount - 1].TrackNumber = trackcount;
+                }
+                else if (itemt.StartsWith("Pre-gap length"))
+                {
+                    eACLog.TrackList[trackcount - 1].PeakLevel = itemt.Substring(15);
+                }
+                else if (itemt.StartsWith("Filename"))
+                {
+                    eACLog.TrackList[trackcount - 1].Filename = itemt.Substring(9);
+                }
+                else if (itemt.StartsWith("Peak level"))
+                {
+                    eACLog.TrackList[trackcount - 1].PeakLevel = itemt.Substring(11);
+                }
+                else if (itemt.StartsWith("Extraction speed"))
+                {
+                    eACLog.TrackList[trackcount - 1].ExtractionSpeed = itemt.Substring(17);
+                }
+                else if (itemt.StartsWith("Track quality"))
+                {
+                    eACLog.TrackList[trackcount - 1].TrackQuality = itemt.Substring(14);
+                }
+                else if (itemt.StartsWith("Test CRC"))
+                {
+                    eACLog.TrackList[trackcount - 1].TestCRC = itemt.Substring(9);
+                }
+                else if (itemt.StartsWith("Copy CRC"))
+                {
+                    eACLog.TrackList[trackcount - 1].CopyCRC = itemt.Substring(9);
+                }
+                else if (itemt.StartsWith("Accurately ripped"))
+                {
+                    eACLog.TrackList[trackcount - 1].AccuratelyRipped = itemt;
+                }
+                else if (itemt.StartsWith("Copy "))
+                {
+                    eACLog.TrackList[trackcount - 1].CopyStatus = itemt.Substring(5);
+                }
+                else if (itemt.StartsWith("Suspicious position"))
+                {
+                    eACLog.TrackList[trackcount - 1].SuspiciousPosition.Add(itemt.Substring(20));
+                }
+                else if (itemt.StartsWith("Timing problem"))
+                {
+                    eACLog.TrackList[trackcount - 1].TimingProblem++;
+                }
+                else if (itemt.StartsWith("Missing sample"))
+                {
+                    eACLog.TrackList[trackcount - 1].MissingSample++;
+                }
+            }
+            #endregion
+            return eACLog;
+        }
+        /// <summary>
+        /// 对一个EAC抓轨记录类进行评分
+        /// </summary>
+        /// <param name="log">表示一个EAC抓轨记录类</param>
+        /// <returns></returns>
+        public Tuple<List<string>, int> GetScore(EACLog log)
+        {
+            #region Pre.
+            int startscore = 100;
+            int dealscore = 0;
+            int score = 0;
+            List<string> commentlist = new List<string>();
+            bool is095 = (new Regex("V0.95")).IsMatch(log.EACVision);
+            bool notestandcopy = false;
+            bool insecure = false;
+            bool allowaroverride = false;
+            #endregion
+            #region Check Get
+            if (!log.IsRange)
+            {
+                #region Check Tracks
+                TrackItem trackItem;
+                for (int i = 0; i < log.TrackList.Count; i++)
+                {
+                    trackItem = log.TrackList[i];
+                    if (trackItem.PreGapLength == null && i == 0 && !log.IsRange)
+                    {
+                        dealscore += TrackRule["PreGapLength"].Score;
+                        commentlist.Add(TrackCommentBuild("PreGapLength", i));
+                    }
+                    if (trackItem.SuspiciousPositionCount > 0)
+                    {
+                        dealscore += TrackRule["SuspiciousPosition"].Score;
+                        commentlist.Add(TrackCommentBuild("SuspiciousPosition", i));
+                    }
+                    if (trackItem.MissingSample > 0)
+                    {
+                        dealscore += TrackRule["MissingSample"].Score;
+                        commentlist.Add(TrackCommentBuild("MissingSample", i));
+                    }
+                    if (trackItem.TimingProblem > 0)
+                    {
+                        dealscore += TrackRule["TimingProblem"].Score;
+                        commentlist.Add(TrackCommentBuild("TimingProblem", i));
+                    }
+                    if (trackItem.CopyStatus != "OK")
+                    {
+                        dealscore += TrackRule["CopyStatus"].Score;
+                        commentlist.Add(TrackCommentBuild("CopyStatus", i));
+                    }
+                    if (trackItem.TestCRC != null && trackItem.TestCRC != trackItem.CopyCRC)
+                    {
+                        dealscore += TrackRule["CRCUncertain"].Score;
+                        commentlist.Add(TrackCommentBuild("CRCUncertain", i));
+                        if (log.ReadMode != "Secure")
+                        {
+                            dealscore += TrackRule["CRCUncertainAndNotSecure"].Score;
+                            commentlist.Add(TrackCommentBuild("CRCUncertainAndNotSecure", i));
+                        }
+                    }
+                    else
+                    {
+                        notestandcopy = true;
+                        if (log.ReadMode != "Secure")
+                        {
+                            insecure = true;
+                        }
+                    }
+                    if (trackItem.AccuratelyRipped == null)
+                    {
+                        allowaroverride = false;
+                        if (!log.IsAllAccuratelyRipped)
+                        {
+                            dealscore += TrackRule["NotAccuratelyRipped"].Score;
+                            commentlist.Add(TrackCommentBuild("NotAccuratelyRipped", i));
+                        }
+
+                    }
+                    else
+                    {
+                        if (is095)
+                        {
+                            dealscore += TrackRule["Fake"].Score;
+                            commentlist.Add(TrackCommentBuild("Fake", i));
+                        }
+                        if (int.Parse(((new Regex(@"^Accurately ripped \(confidence (\d+)\)")).Matches(trackItem.AccuratelyRipped)[1].ToString())) < 2)
+                        {
+                            allowaroverride = false;
+                        }
+                    }
+                    if (trackItem.TrackQuality == null && log.ReadMode == "Secure" && !is095)
+                    {
+                        dealscore += TrackRule["Fake"].Score;
+                        commentlist.Add(TrackCommentBuild("Fake", i));
+                    }
+                }
+                #endregion
+            }
+            else
+            {
+                dealscore += MasterRule["IsRange"].Score;
+                commentlist.Add(MasterRule["IsRange"].Comment);
+            }
+            #endregion
+            #region Check Header
+            if (!log.IsAllAccuratelyRipped)
+            {
+                dealscore += MasterRule["IsNotAllAccuratelyRipped"].Score;
+                commentlist.Add(MasterRule["IsNotAllAccuratelyRipped"].Comment);
+            }
+            if (log.NormalizeTo != null)
+            {
+                dealscore += MasterRule["NormalizeToOn"].Score;
+                commentlist.Add(MasterRule["NormalizeToOn"].Comment);
+            }
+            if (log.UseCompressionOffset)
+            {
+                dealscore += MasterRule["UseCompressionOffset"].Score;
+                commentlist.Add(MasterRule["UseCompressionOffset"].Comment);
+            }
+            if (log.ReadMode != "Secure")
+            {
+                dealscore += MasterRule["InSecure"].Score;
+                commentlist.Add(MasterRule["InSecure"].Comment);
+            }
+            if (log.DefeatAudioCache != "Yes" && log.ReadMode != "Burst")
+            {
+                dealscore += MasterRule["NoDefeatAudioCache"].Score;
+                commentlist.Add(MasterRule["NoDefeatAudioCache"].Comment);
+            }
+
+            #endregion
+            return new Tuple<List<string>, int>(commentlist, score);
         }
 
-        public string GetCommment(ILog log)
+        private string SearchStringStartsWithinList(string name, List<string> list)
         {
-            return GetResult(log).Item1;
+            if (list.Exists(a => a.StartsWith(name)))
+            {
+                return list.Find(a => a.StartsWith(name));
+            }
+            else
+            {
+                return null;
+            }
         }
-
-        public Tuple<string, int> GetResult(string log)
+        private string TrackCommentBuild(string name, int i)
         {
-            throw new NotImplementedException();
-        }
-
-        public Tuple<string, int> GetResult(ILog log)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int GetScore(string log)
-        {
-            return GetResult(log).Item2;
-        }
-
-        public int GetScore(ILog log)
-        {
-            return GetResult(log).Item2;
-        }
-
-        public ILog LogCovertFromStream(Stream stream)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ILog LogCovertFromString(string log)
-        {
-            throw new NotImplementedException();
+            return String.Format(TrackRule[name].Comment, i.ToString(), TrackRule[name].StartScore, TrackRule[name].Score);
         }
     }
 }

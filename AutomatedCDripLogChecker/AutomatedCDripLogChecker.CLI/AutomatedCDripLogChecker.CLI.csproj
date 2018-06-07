@@ -5,4 +5,8 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AutomatedCDripLogChecker.Core\AutomatedCDripLogChecker.Core.csproj" />
+  </ItemGroup>
+
 </Project>
