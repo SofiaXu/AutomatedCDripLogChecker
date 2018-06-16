@@ -7,7 +7,7 @@ using System.ComponentModel;
 
 namespace AutomatedCDripLogChecker.GUI.Models
 {
-    class ObservableObjectBase : INotifyPropertyChanged
+    public class ObservableObjectBase : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
