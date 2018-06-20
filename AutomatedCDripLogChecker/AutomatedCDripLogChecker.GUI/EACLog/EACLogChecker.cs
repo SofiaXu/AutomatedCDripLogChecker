@@ -39,19 +39,24 @@ namespace AutomatedCDripLogChecker.Core
             List<string> loglines = log.Split(new string[] { "\r\n" }, StringSplitOptions.None).ToList();
             if (!loglines[0].StartsWith("Exact Audio Copy"))
             {
-                throw new Exception("Error:000001");//Error:000001 表示该log不是EAC log
+                throw new Exception("Error:000001 Unrecognised Log");//Error:000001 表示该log不是EAC log
+            }
+            if (!loglines.Exists(a => a.StartsWith("EAC extraction logfile from")))
+            {
+                throw new Exception("Error:000001 Unrecognised Log");
             }
             if (loglines.Exists((s) => s.Trim() == "Range status and errors" ? true : false))
             {
                 eACLog.IsRange = true;
             }
+            var result = Checksum.EACAESChecker.ComputeChecksum(log);
             #endregion
             #region Handle header
             eACLog.EACVision = (loglines[0].Substring(17).Split(new string[] { "from " }, StringSplitOptions.None))[0];
 
             eACLog.CopyDate = (loglines[2].Split(new string[] { "from " }, StringSplitOptions.None))[1];
 
-            eACLog.LogCheckSum = loglines.Where(a => a.StartsWith("==== Log checksum")).ToList()[0].Split(' ')[3];
+            eACLog.LogCheckSum = SearchStringStartsWithinList("==== Log checksum", loglines)?.Split(' ')[3];
 
             eACLog.TrackName = loglines[4];
 
@@ -284,91 +289,94 @@ namespace AutomatedCDripLogChecker.Core
             }
             #endregion
             #region Check Header
-            if (!log.IsAllAccuratelyRipped)
+            if (!log.IsRange)
             {
-                dealscore += MasterRule["IsNotAllAccuratelyRipped"].Score;
-                commentlist.Add(MasterRule["IsNotAllAccuratelyRipped"].Comment);
-            }
-            if (log.NormalizeTo != null)
-            {
-                dealscore += MasterRule["NormalizeToOn"].Score;
-                commentlist.Add(MasterRule["NormalizeToOn"].Comment);
-            }
-            if (log.UseCompressionOffset)
-            {
-                dealscore += MasterRule["UseCompressionOffset"].Score;
-                commentlist.Add(MasterRule["UseCompressionOffset"].Comment);
-            }
-            if (log.MakeUseofC2Pointers == "Yes")
-            {
-                dealscore += MasterRule["UsedC2"].Score;
-                commentlist.Add(MasterRule["UsedC2"].Comment);
-            }
-            if (log.FillUpMissingOffsetSamplesWithSilence != "Yes")
-            {
-                dealscore += MasterRule["NotFillUpMissingOffsetSamplesWithSilence"].Score;
-                commentlist.Add(MasterRule["NotFillUpMissingOffsetSamplesWithSilence"].Comment);
-                if (log.NullSamplesUsedinCRCCalculations != "Yes")
+                if (!log.IsAllAccuratelyRipped)
                 {
-                    dealscore += MasterRule["NotNullSamplesUsedinCRCCalculations"].Score;
-                    commentlist.Add(MasterRule["NotNullSamplesUsedinCRCCalculations"].Comment);
+                    dealscore += MasterRule["IsNotAllAccuratelyRipped"].Score;
+                    commentlist.Add(MasterRule["IsNotAllAccuratelyRipped"].Comment);
                 }
-            }
-            if (log.DeleteLeadingTrailingSilentBlocks == "Yes")
-            {
-                dealscore += MasterRule["DeleteLeadingTrailingSilentBlocks"].Score;
-                commentlist.Add(MasterRule["DeleteLeadingTrailingSilentBlocks"].Comment);
-            }
-            if (log.GapHandling != "Appended to previous track" && !is095)
-            {
-                dealscore += MasterRule["NotGapHandle"].Score;
-                commentlist.Add(MasterRule["NotGapHandle"].Comment);
-            }
-            if (log.AddID3Tag == "Yes")
-            {
-                dealscore += MasterRule["AddID3Tag"].Score;
-                commentlist.Add(MasterRule["AddID3Tag"].Comment);
-            }
-            if (log.ReadMode != "Secure")
-            {
-                dealscore += MasterRule["InSecure"].Score;
-                commentlist.Add(MasterRule["InSecure"].Comment);
-            }
-            if (log.DefeatAudioCache != "Yes" && log.ReadMode != "Burst")
-            {
-                dealscore += MasterRule["NoDefeatAudioCache"].Score;
-                commentlist.Add(MasterRule["NoDefeatAudioCache"].Comment);
-            }
-            if ((new Regex("Generic DVD-ROM SCSI CdRom Device")).IsMatch(log.UsedDrive))
-            {
-                dealscore += MasterRule["VirtualDriveUsed"].Score;
-                commentlist.Add(MasterRule["VirtualDriveUsed"].Comment);
-            }
-            else
-            {
-                var drivename = ReplaceString(@"/[^0-9a-z]/i", ReplaceString(@"\s+", ReplaceString(@"\s+-\s", log.UsedDrive)).Trim()).Split(' ');
-                var drive = drivename[drivename.Length - 1];
-                var q = from item in DriveDB
-                        where item?.Item1.IndexOf(drive) >= 0
-                        select item.Item2;
-                var list = q.ToList();
-                if (list.Count > 0 && list.Count <= 30 && list != null)
+                if (log.NormalizeTo != null)
                 {
-                    if (!list.Exists(a => a.Replace(" ", "") == log.ReadOffsetCorrection))
+                    dealscore += MasterRule["NormalizeToOn"].Score;
+                    commentlist.Add(MasterRule["NormalizeToOn"].Comment);
+                }
+                if (log.UseCompressionOffset)
+                {
+                    dealscore += MasterRule["UseCompressionOffset"].Score;
+                    commentlist.Add(MasterRule["UseCompressionOffset"].Comment);
+                }
+                if (log.MakeUseofC2Pointers == "Yes")
+                {
+                    dealscore += MasterRule["UsedC2"].Score;
+                    commentlist.Add(MasterRule["UsedC2"].Comment);
+                }
+                if (log.FillUpMissingOffsetSamplesWithSilence != "Yes")
+                {
+                    dealscore += MasterRule["NotFillUpMissingOffsetSamplesWithSilence"].Score;
+                    commentlist.Add(MasterRule["NotFillUpMissingOffsetSamplesWithSilence"].Comment);
+                    if (log.NullSamplesUsedinCRCCalculations != "Yes")
                     {
-                        dealscore += MasterRule["OffsetNotRight"].Score;
-                        commentlist.Add(MasterRule["OffsetNotRight"].Comment);
+                        dealscore += MasterRule["NotNullSamplesUsedinCRCCalculations"].Score;
+                        commentlist.Add(MasterRule["NotNullSamplesUsedinCRCCalculations"].Comment);
                     }
                 }
-                else if (log.ReadOffsetCorrection == "0")
+                if (log.DeleteLeadingTrailingSilentBlocks == "Yes")
                 {
-                    dealscore += MasterRule["OffsetNotFound"].Score;
-                    commentlist.Add(MasterRule["OffsetNotFound"].Comment);
+                    dealscore += MasterRule["DeleteLeadingTrailingSilentBlocks"].Score;
+                    commentlist.Add(MasterRule["DeleteLeadingTrailingSilentBlocks"].Comment);
                 }
-                else if (log.ReadOffsetCorrection != "0")
+                if (log.GapHandling != "Appended to previous track" && !is095)
                 {
-                    dealscore += MasterRule["OffsetNotInDB"].Score;
-                    commentlist.Add(MasterRule["OffsetNotInDB"].Comment);
+                    dealscore += MasterRule["NotGapHandle"].Score;
+                    commentlist.Add(MasterRule["NotGapHandle"].Comment);
+                }
+                if (log.AddID3Tag == "Yes")
+                {
+                    dealscore += MasterRule["AddID3Tag"].Score;
+                    commentlist.Add(MasterRule["AddID3Tag"].Comment);
+                }
+                if (log.ReadMode != "Secure")
+                {
+                    dealscore += MasterRule["InSecure"].Score;
+                    commentlist.Add(MasterRule["InSecure"].Comment);
+                }
+                if (log.DefeatAudioCache != "Yes" && log.ReadMode != "Burst")
+                {
+                    dealscore += MasterRule["NoDefeatAudioCache"].Score;
+                    commentlist.Add(MasterRule["NoDefeatAudioCache"].Comment);
+                }
+                if ((new Regex("Generic DVD-ROM SCSI CdRom Device")).IsMatch(log.UsedDrive))
+                {
+                    dealscore += MasterRule["VirtualDriveUsed"].Score;
+                    commentlist.Add(MasterRule["VirtualDriveUsed"].Comment);
+                }
+                else
+                {
+                    var drivename = ReplaceString(@"/[^0-9a-z]/i", ReplaceString(@"\s+", ReplaceString(@"\s+-\s", log.UsedDrive)).Trim()).Split(' ');
+                    var drive = drivename[drivename.Length - 1];
+                    var q = from item in DriveDB
+                            where item?.Item1.IndexOf(drive) >= 0
+                            select item.Item2;
+                    var list = q.ToList();
+                    if (list.Count > 0 && list.Count <= 30 && list != null)
+                    {
+                        if (!list.Exists(a => a.Replace(" ", "") == log.ReadOffsetCorrection))
+                        {
+                            dealscore += MasterRule["OffsetNotRight"].Score;
+                            commentlist.Add(MasterRule["OffsetNotRight"].Comment);
+                        }
+                    }
+                    else if (log.ReadOffsetCorrection == "0")
+                    {
+                        dealscore += MasterRule["OffsetNotFound"].Score;
+                        commentlist.Add(MasterRule["OffsetNotFound"].Comment);
+                    }
+                    else if (log.ReadOffsetCorrection != "0")
+                    {
+                        dealscore += MasterRule["OffsetNotInDB"].Score;
+                        commentlist.Add(MasterRule["OffsetNotInDB"].Comment);
+                    }
                 }
             }
             #endregion

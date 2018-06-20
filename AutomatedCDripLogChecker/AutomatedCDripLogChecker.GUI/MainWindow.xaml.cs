@@ -24,7 +24,7 @@ namespace AutomatedCDripLogChecker.GUI
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new MainWindowsViewModel();
+            DataContext = new MainWindowViewModel();
         }
     }
 }

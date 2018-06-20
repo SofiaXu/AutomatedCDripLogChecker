@@ -7,11 +7,11 @@ using System.Windows;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("AutomatedCDripLogChecker.GUI")]
+[assembly: AssemblyTitle("Automated CDrip Log Checker")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("AutomatedCDripLogChecker.GUI")]
+[assembly: AssemblyCompany("Aki Xu")]
+[assembly: AssemblyProduct("Automated CDrip Log Checker")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

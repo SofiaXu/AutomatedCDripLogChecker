@@ -3,11 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2027
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutomatedCDripLogChecker.Core", "AutomatedCDripLogChecker.Core\AutomatedCDripLogChecker.Core.csproj", "{DF2C957D-E634-4062-B64F-A0F2724D0E6B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomatedCDripLogChecker.GUI", "AutomatedCDripLogChecker.GUI\AutomatedCDripLogChecker.GUI.csproj", "{E9DF795A-A297-4FDA-8D12-482065191B89}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomatedCDripLogChecker.Test", "AutomatedCDripLogChecker.Test\AutomatedCDripLogChecker.Test.csproj", "{8439EC40-5F92-4512-91F4-208C3B9E4C01}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,18 +11,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DF2C957D-E634-4062-B64F-A0F2724D0E6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DF2C957D-E634-4062-B64F-A0F2724D0E6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DF2C957D-E634-4062-B64F-A0F2724D0E6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DF2C957D-E634-4062-B64F-A0F2724D0E6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E1606DC-6AE7-491A-8DF4-5290D9F6505D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E1606DC-6AE7-491A-8DF4-5290D9F6505D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E1606DC-6AE7-491A-8DF4-5290D9F6505D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E1606DC-6AE7-491A-8DF4-5290D9F6505D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E9DF795A-A297-4FDA-8D12-482065191B89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E9DF795A-A297-4FDA-8D12-482065191B89}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E9DF795A-A297-4FDA-8D12-482065191B89}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E9DF795A-A297-4FDA-8D12-482065191B89}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8439EC40-5F92-4512-91F4-208C3B9E4C01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8439EC40-5F92-4512-91F4-208C3B9E4C01}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8439EC40-5F92-4512-91F4-208C3B9E4C01}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8439EC40-5F92-4512-91F4-208C3B9E4C01}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
