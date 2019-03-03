@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace AutomatedCDripLogChecker.Core
+﻿namespace AutomatedCDripLogChecker.Core
 {
-    public class TOCItem
+    public class EACTOCItem
     {
         public string TrackNumber { get; set; }
         public string StartTime { get; set; }

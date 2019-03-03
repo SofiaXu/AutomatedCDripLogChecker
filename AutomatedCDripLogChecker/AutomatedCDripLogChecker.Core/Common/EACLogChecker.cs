@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -8,8 +7,8 @@ namespace AutomatedCDripLogChecker.Core
 {
     public class EACLogChecker
     {
-        public Dictionary<string, RuleItem> MasterRule { get;private set; }
-        public List<Tuple<string,string>> DriveDB { get; private set; }
+        public Dictionary<string, RuleItem> MasterRule { get; private set; }
+        public List<Tuple<string, string>> DriveDB { get; private set; }
 
         /// <summary>
         /// 新建一个带规则文件和驱动器列表的检查器
@@ -30,6 +29,7 @@ namespace AutomatedCDripLogChecker.Core
         public EACLog ConvertfromString(string log)
         {
             #region Pre.
+
             string[] splitPoint = new string[] { ": " };
             EACLog eACLog = new EACLog();
             int head = 0;
@@ -45,8 +45,11 @@ namespace AutomatedCDripLogChecker.Core
             {
                 eACLog.IsRange = true;
             }
-            #endregion
+
+            #endregion Pre.
+
             #region Handle header
+
             eACLog.EACVision = (loglines[0].Substring(17).Split(new string[] { "from " }, StringSplitOptions.None))[0];
 
             eACLog.CopyDate = (loglines[2].Split(new string[] { "from " }, StringSplitOptions.None))[1];
@@ -88,8 +91,11 @@ namespace AutomatedCDripLogChecker.Core
                 eACLog.SimpleFormat = SearchStringStartsWithinList("Simple format", loglines)?.Split(splitPoint, StringSplitOptions.None)[1];
             }
             eACLog.IsAllAccuratelyRipped = loglines.Exists(a => a.Trim() == "All tracks accurately ripped");
-            #endregion
+
+            #endregion Handle header
+
             #region Handle TOC
+
             head = loglines.IndexOf("TOC of the extracted CD") + 4;
             range = 0;
             if (eACLog.IsRange)
@@ -106,7 +112,7 @@ namespace AutomatedCDripLogChecker.Core
                 string[] subitem = item.Split('|');
                 if (int.TryParse(subitem[0].Trim(), out int a))
                 {
-                    TOCItem tempTOC = new TOCItem()
+                    EACTOCItem tempTOC = new EACTOCItem()
                     {
                         TrackNumber = subitem[0].Trim(),
                         StartTime = subitem[1].Trim(),
@@ -116,10 +122,12 @@ namespace AutomatedCDripLogChecker.Core
                     };
                     eACLog.TOC.Add(tempTOC);
                 }
-
             }
-            #endregion
+
+            #endregion Handle TOC
+
             #region Handle Track
+
             head = 0;
             range = 0;
             if (eACLog.IsRange)
@@ -139,7 +147,7 @@ namespace AutomatedCDripLogChecker.Core
                 if (item.StartsWith("Track ") || item.StartsWith("Selected range"))
                 {
                     trackcount++;
-                    eACLog.TrackList.Add(new TrackItem());
+                    eACLog.TrackList.Add(new EACTrackItem());
                     eACLog.TrackList[trackcount - 1].TrackNumber = trackcount;
                 }
                 else if (itemt.StartsWith("Pre-gap length"))
@@ -191,9 +199,12 @@ namespace AutomatedCDripLogChecker.Core
                     eACLog.TrackList[trackcount - 1].MissingSample++;
                 }
             }
-            #endregion
+
+            #endregion Handle Track
+
             return eACLog;
         }
+
         /// <summary>
         /// 对一个EAC抓轨记录类进行评分
         /// </summary>
@@ -202,54 +213,59 @@ namespace AutomatedCDripLogChecker.Core
         public Tuple<List<string>, int> GetScore(EACLog log)
         {
             #region Pre.
+
             int dealscore = 0;
             List<string> commentlist = new List<string>();
             bool is095 = (new Regex("V0.95")).IsMatch(log.EACVision);
-            #endregion
+
+            #endregion Pre.
+
             #region Check Get
+
             if (!log.IsRange)
             {
                 #region Check Tracks
-                TrackItem trackItem;
+
+                EACTrackItem trackItem;
                 for (int i = 0; i < log.TrackList.Count; i++)
                 {
                     trackItem = log.TrackList[i];
                     if (trackItem.PreGapLength == null && i == 0 && is095)
                     {
                         dealscore += MasterRule["PreGapLength"].Score;
-                        commentlist.Add(TrackCommentBuild("PreGapLength", i+1));
+                        commentlist.Add(TrackCommentBuild("PreGapLength", i + 1));
                     }
                     if (trackItem.SuspiciousPositionCount > 0)
                     {
                         dealscore += MasterRule["SuspiciousPosition"].Score;
-                        commentlist.Add(TrackCommentBuild("SuspiciousPosition", i+1));
+                        commentlist.Add(TrackCommentBuild("SuspiciousPosition", i + 1));
                     }
                     if (trackItem.MissingSample > 0)
                     {
                         dealscore += MasterRule["MissingSample"].Score;
-                        commentlist.Add(TrackCommentBuild("MissingSample", i+1));
+                        commentlist.Add(TrackCommentBuild("MissingSample", i + 1));
                     }
                     if (trackItem.TimingProblem > 0)
                     {
                         dealscore += MasterRule["TimingProblem"].Score;
-                        commentlist.Add(TrackCommentBuild("TimingProblem", i+1));
+                        commentlist.Add(TrackCommentBuild("TimingProblem", i + 1));
                     }
                     if (trackItem.CopyStatus != "OK")
                     {
                         dealscore += MasterRule["CopyStatus"].Score;
-                        commentlist.Add(TrackCommentBuild("CopyStatus", i+1));
+                        commentlist.Add(TrackCommentBuild("CopyStatus", i + 1));
                     }
                     if (trackItem.TestCRC != null && trackItem.TestCRC != trackItem.CopyCRC)
                     {
                         if (log.ReadMode != "Secure")
                         {
                             dealscore += MasterRule["CRCUncertainAndNotSecure"].Score;
-                            commentlist.Add(TrackCommentBuild("CRCUncertainAndNotSecure", i+1));
+                            commentlist.Add(TrackCommentBuild("CRCUncertainAndNotSecure", i + 1));
                         }
                         else
                         {
                             dealscore += MasterRule["CRCUncertain"].Score;
-                            commentlist.Add(TrackCommentBuild("CRCUncertain", i+1));
+                            commentlist.Add(TrackCommentBuild("CRCUncertain", i + 1));
                         }
                     }
                     if (trackItem.AccuratelyRipped == null)
@@ -257,33 +273,36 @@ namespace AutomatedCDripLogChecker.Core
                         if (!log.IsAllAccuratelyRipped)
                         {
                             dealscore += MasterRule["NotAccuratelyRipped"].Score;
-                            commentlist.Add(TrackCommentBuild("NotAccuratelyRipped", i+1));
+                            commentlist.Add(TrackCommentBuild("NotAccuratelyRipped", i + 1));
                         }
-
                     }
                     else
                     {
                         if (is095)
                         {
                             dealscore += MasterRule["Fake"].Score;
-                            commentlist.Add(TrackCommentBuild("Fake", i+1));
+                            commentlist.Add(TrackCommentBuild("Fake", i + 1));
                         }
                     }
                     if (trackItem.TrackQuality == null && log.ReadMode == "Secure" && !is095)
                     {
                         dealscore += MasterRule["Fake"].Score;
-                        commentlist.Add(TrackCommentBuild("Fake", i+1));
+                        commentlist.Add(TrackCommentBuild("Fake", i + 1));
                     }
                 }
-                #endregion
+
+                #endregion Check Tracks
             }
             else
             {
                 dealscore += MasterRule["IsRange"].Score;
                 commentlist.Add(MasterRule["IsRange"].Comment);
             }
-            #endregion
+
+            #endregion Check Get
+
             #region Check Header
+
             if (!log.IsAllAccuratelyRipped)
             {
                 dealscore += MasterRule["IsNotAllAccuratelyRipped"].Score;
@@ -371,7 +390,9 @@ namespace AutomatedCDripLogChecker.Core
                     commentlist.Add(MasterRule["OffsetNotInDB"].Comment);
                 }
             }
-            #endregion
+
+            #endregion Check Header
+
             return new Tuple<List<string>, int>(commentlist, 100 - dealscore);
         }
 
@@ -386,10 +407,12 @@ namespace AutomatedCDripLogChecker.Core
                 return null;
             }
         }
+
         private string TrackCommentBuild(string name, int i)
         {
             return String.Format(MasterRule[name].Comment, i.ToString(), MasterRule[name].Score);
         }
+
         private string ReplaceString(string pattern, string s) => Regex.Replace(s, pattern, " ", RegexOptions.None);
     }
 }

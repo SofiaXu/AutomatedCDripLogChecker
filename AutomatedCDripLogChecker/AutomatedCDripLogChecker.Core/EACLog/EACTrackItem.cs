@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace AutomatedCDripLogChecker.Core
 {
-    public class TrackItem
+    public class EACTrackItem
     {
         public string Filename { get; set; }
         public string PeakLevel { get; set; }
@@ -15,13 +13,13 @@ namespace AutomatedCDripLogChecker.Core
         public string AccuratelyRipped { get; set; }
         public string CopyStatus { get; set; }
         public string PreGapLength { get; set; }
-        public List<string> SuspiciousPosition { get; set; }
+        public List<string> SuspiciousPosition { get; }
         public int SuspiciousPositionCount => SuspiciousPosition.Count;
         public int TimingProblem { get; set; } = 0;
         public int MissingSample { get; set; } = 0;
         public int TrackNumber { get; set; } = 1;
 
-        public TrackItem()
+        public EACTrackItem()
         {
             SuspiciousPosition = new List<string>();
         }

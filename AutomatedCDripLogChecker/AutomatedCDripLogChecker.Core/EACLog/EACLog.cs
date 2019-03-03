@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace AutomatedCDripLogChecker.Core
 {
-    public class EACLog
+    public class EACLog : RipperLog
     {
         public string EACVision { get; set; }
         public string CopyDate { get; set; }
@@ -31,17 +29,17 @@ namespace AutomatedCDripLogChecker.Core
         public string CommandLineCompressor { get; set; }
         public string AdditionalCommandLineOptions { get; set; }
         public string SimpleFormat { get; set; }
-        public List<TOCItem> TOC { get; set; }
+        public List<EACTOCItem> TOC { get; set; }
         public bool IsRange { get; set; } = false;
-        public List<TrackItem> TrackList { get; set; }
+        public List<EACTrackItem> TrackList { get; set; }
         public bool IsAllAccuratelyRipped { get; set; } = false;
         public bool UseCompressionOffset { get; set; } = false;
         public string LogCheckSum { get; set; }
 
-        public EACLog()
+        public EACLog() : base("EAC")
         {
-            TOC = new List<TOCItem>();
-            TrackList = new List<TrackItem>();
+            TOC = new List<EACTOCItem>();
+            TrackList = new List<EACTrackItem>();
         }
     }
 }
